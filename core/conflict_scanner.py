@@ -4,6 +4,7 @@ import re
 import difflib
 from pathlib import Path
 from core.file_types import IFS_FILE_TYPES
+from core.beautifier import beautify
 
 CONFLICT_START = re.compile(r'^<{7} ')
 CONFLICT_SEP   = re.compile(r'^={7}$')
@@ -54,6 +55,8 @@ def _has_conflict_markers(file_path: Path) -> bool:
 
 def parse_conflicts(file_path: str) -> list[dict]:
     path = Path(file_path)
+    ext  = path.suffix.lower()
+
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
 
@@ -76,13 +79,20 @@ def parse_conflicts(file_path: str) -> list[dict]:
                 i += 1
 
             end = i
-            local_text = "".join(local_lines).rstrip()
-            repo_text  = "".join(repo_lines).rstrip()
+            local_text = beautify("".join(local_lines).rstrip(), ext)
+            repo_text  = beautify("".join(repo_lines).rstrip(), ext)
+
+            # Rebuild beautified lines for diff
+            local_b = [l + "\n" for l in local_text.splitlines()] if local_text else []
+            repo_b  = [l + "\n" for l in repo_text.splitlines()]  if repo_text  else []
 
             try:
-                diff = _build_diff(local_lines, repo_lines, start + 1)
+                diff = _build_diff(local_b, repo_b, start + 1)
             except Exception:
                 diff = []
+
+            raw_preview = _smart_merge_preview(local_lines, repo_lines)
+            preview     = beautify(raw_preview, ext)
 
             conflicts.append({
                 "index":      len(conflicts),
@@ -90,7 +100,7 @@ def parse_conflicts(file_path: str) -> list[dict]:
                 "repo":       repo_text,
                 "start_line": start,
                 "end_line":   end,
-                "preview":    _smart_merge_preview(local_lines, repo_lines),
+                "preview":    preview,
                 "diff":       diff,
             })
         i += 1
@@ -289,6 +299,8 @@ def _merge_code_lines(local: list[str], repo: list[str]) -> list[str]:
 
 def apply_resolution(file_path: str, resolutions: list[dict]) -> None:
     path = Path(file_path)
+    ext  = path.suffix.lower()
+
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
 
@@ -305,15 +317,14 @@ def apply_resolution(file_path: str, resolutions: list[dict]) -> None:
         if i in conflict_at:
             conflict, strategy = conflict_at[i]
             if strategy == "local":
-                if conflict["local"]:
-                    output.append(conflict["local"] + "\n")
+                resolved = conflict["local"]
             elif strategy == "repo":
-                if conflict["repo"]:
-                    output.append(conflict["repo"] + "\n")
-            elif strategy == "both":
-                merged = conflict["preview"]  # already computed smart merge
-                if merged:
-                    output.append(merged + "\n")
+                resolved = conflict["repo"]
+            else:
+                resolved = conflict["preview"]
+
+            if resolved:
+                output.append(beautify(resolved, ext) + "\n")
             i = conflict["end_line"] + 1
         else:
             output.append(lines[i])
