@@ -82,9 +82,37 @@ function renderConflict() {
         `Conflict ${currentIndex + 1} of ${currentConflicts.length}`;
     document.getElementById("localPane").textContent = c.local || "(empty)";
     document.getElementById("repoPane").textContent = c.repo || "(empty)";
+
+    // Show merged preview if both sides have content
+    const previewPane = document.getElementById("previewPane");
+    if (c.preview && c.local && c.repo) {
+        document.getElementById("previewCode").textContent = c.preview;
+        previewPane.style.display = "block";
+    } else {
+        previewPane.style.display = "none";
+    }
+
+    // Clear previous info message when moving to new conflict
+    setInfoMessage("", "");
+}
+
+const STRATEGY_LABELS = {
+    local: { text: "Local changes kept — incoming changes discarded.", type: "local" },
+    repo:  { text: "Incoming changes kept — local changes discarded.", type: "repo" },
+    both:  { text: "Both changes merged — comments placed in order.", type: "both" },
+};
+
+function setInfoMessage(text, type) {
+    const el = document.getElementById("infoMessage");
+    el.textContent = text;
+    el.className = "info-message" + (type ? ` info-${type}` : "");
+    el.style.display = text ? "block" : "none";
 }
 
 async function resolve(strategy) {
+    const info = STRATEGY_LABELS[strategy];
+    setInfoMessage(`Processing… ${info.text}`, info.type);
+
     const res = await fetch("/api/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

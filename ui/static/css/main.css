@@ -187,6 +187,46 @@ button:disabled:hover { background: #b2bec3; }
 .btn-both  { background: #6c5ce7; }
 .btn-both:hover  { background: #5a4bd1; }
 
+/* ── Keep Both preview ── */
+#previewPane {
+    margin-top: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #a29bfe;
+}
+.preview-label {
+    background: #ede9fe;
+    color: #5a4bd1;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+#previewCode {
+    padding: 12px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+    background: #f5f3ff;
+    min-height: 60px;
+}
+
+/* ── Info message ── */
+.info-message {
+    margin-top: 12px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    border-left: 4px solid;
+}
+.info-local { background: #f0fdf8; border-color: #00b894; color: #00695c; }
+.info-repo  { background: #fff8f8; border-color: #d63031; color: #c0392b; }
+.info-both  { background: #f5f3ff; border-color: #6c5ce7; color: #5a4bd1; }
+
 /* ── Toast ── */
 .toast {
     position: fixed;

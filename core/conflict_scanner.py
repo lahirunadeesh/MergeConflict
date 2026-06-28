@@ -7,9 +7,15 @@ CONFLICT_START = re.compile(r'^<{7} ')
 CONFLICT_SEP   = re.compile(r'^={7}$')
 CONFLICT_END   = re.compile(r'^>{7} ')
 
+# IFS comment line patterns
+LINE_COMMENT    = re.compile(r'^\s*--')
+BLOCK_COMMENT_S = re.compile(r'^\s*/\*')
+BLOCK_COMMENT_E = re.compile(r'\*/\s*$')
+# History entry: e.g. "-- 240102  NHENLK  SMDEV-21249 - ..."
+HISTORY_ENTRY   = re.compile(r'^\s*--\s+\d{6}\s+\w+\s+')
+
 
 def scan_for_conflicts(root_path: str) -> list[dict]:
-    """Walk root_path and return all IFS files that contain Git conflict markers."""
     results = []
     root = Path(root_path)
 
@@ -19,11 +25,9 @@ def scan_for_conflicts(root_path: str) -> list[dict]:
     for file_path in root.rglob("*"):
         if not file_path.is_file():
             continue
-
         ext = file_path.suffix.lower()
         if ext not in IFS_FILE_TYPES:
             continue
-
         if _has_conflict_markers(file_path):
             results.append({
                 "path": str(file_path),
@@ -47,10 +51,6 @@ def _has_conflict_markers(file_path: Path) -> bool:
 
 
 def parse_conflicts(file_path: str) -> list[dict]:
-    """
-    Parse a file and extract all conflict blocks.
-    Returns a list of {index, local, repo, start_line, end_line}.
-    """
     path = Path(file_path)
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
@@ -64,47 +64,157 @@ def parse_conflicts(file_path: str) -> list[dict]:
             repo_lines = []
             i += 1
 
-            # Collect local (HEAD) side
             while i < len(lines) and not CONFLICT_SEP.match(lines[i].rstrip()):
                 local_lines.append(lines[i])
                 i += 1
             i += 1  # skip =======
 
-            # Collect repo (incoming) side
             while i < len(lines) and not CONFLICT_END.match(lines[i]):
                 repo_lines.append(lines[i])
                 i += 1
 
             end = i
+            local_text = "".join(local_lines).rstrip()
+            repo_text  = "".join(repo_lines).rstrip()
+
             conflicts.append({
-                "index": len(conflicts),
-                "local": "".join(local_lines).rstrip(),
-                "repo": "".join(repo_lines).rstrip(),
+                "index":      len(conflicts),
+                "local":      local_text,
+                "repo":       repo_text,
                 "start_line": start,
-                "end_line": end,
+                "end_line":   end,
+                "preview":    _smart_merge_preview(local_lines, repo_lines),
             })
         i += 1
 
     return conflicts
 
 
+def _smart_merge_preview(local_lines: list[str], repo_lines: list[str]) -> str:
+    """
+    Preview of what 'Keep Both' will produce after smart comment merging.
+    """
+    return _smart_merge_both(local_lines, repo_lines)
+
+
+def _smart_merge_both(local_lines: list[str], repo_lines: list[str]) -> str:
+    """
+    Merge local and repo sides intelligently:
+    - Comment blocks (history headers, -- lines, /* */ blocks) are merged
+      and deduplicated, with repo history entries inserted in the right place.
+    - Non-comment code lines from both sides are concatenated (local first).
+    """
+    local_comments, local_code = _split_comments_and_code(local_lines)
+    repo_comments,  repo_code  = _split_comments_and_code(repo_lines)
+
+    merged_comments = _merge_comment_blocks(local_comments, repo_comments)
+    merged_code     = _merge_code_lines(local_code, repo_code)
+
+    result_parts = []
+    if merged_comments:
+        result_parts.append("".join(merged_comments).rstrip())
+    if merged_code:
+        if result_parts:
+            result_parts.append("\n")
+        result_parts.append("".join(merged_code).rstrip())
+
+    return "\n".join(result_parts) if result_parts else ""
+
+
+def _split_comments_and_code(lines: list[str]) -> tuple[list[str], list[str]]:
+    """
+    Separate a block of lines into:
+    - comment_lines: leading comment block (-- lines and /* */ blocks)
+    - code_lines: everything after the leading comments
+    """
+    comment_lines = []
+    code_lines    = []
+    in_block_comment = False
+    past_comments    = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not past_comments:
+            if in_block_comment:
+                comment_lines.append(line)
+                if BLOCK_COMMENT_E.search(line):
+                    in_block_comment = False
+            elif BLOCK_COMMENT_S.match(line):
+                comment_lines.append(line)
+                if not BLOCK_COMMENT_E.search(line):
+                    in_block_comment = True
+            elif LINE_COMMENT.match(line) or stripped == "":
+                comment_lines.append(line)
+            else:
+                past_comments = True
+                code_lines.append(line)
+        else:
+            code_lines.append(line)
+
+    return comment_lines, code_lines
+
+
+def _merge_comment_blocks(local: list[str], repo: list[str]) -> list[str]:
+    """
+    Merge two comment blocks. History entries from repo that don't exist
+    in local are inserted in chronological order within the history section.
+    Non-history comment lines are deduplicated (local wins for duplicates).
+    """
+    if not local and not repo:
+        return []
+    if not local:
+        return repo
+    if not repo:
+        return local
+
+    # Find history entries in local and repo
+    local_history  = {l.strip() for l in local  if HISTORY_ENTRY.match(l)}
+    repo_history   = {l.strip() for l in repo   if HISTORY_ENTRY.match(l)}
+    new_repo_entries = [l for l in repo if HISTORY_ENTRY.match(l)
+                        and l.strip() not in local_history]
+
+    if not new_repo_entries:
+        return local  # nothing new to add
+
+    # Find insertion point: after the last existing history entry in local
+    result = list(local)
+    last_history_idx = -1
+    for idx, line in enumerate(result):
+        if HISTORY_ENTRY.match(line):
+            last_history_idx = idx
+
+    if last_history_idx >= 0:
+        insert_at = last_history_idx + 1
+        for entry in reversed(new_repo_entries):
+            result.insert(insert_at, entry if entry.endswith("\n") else entry + "\n")
+    else:
+        result.extend(new_repo_entries)
+
+    return result
+
+
+def _merge_code_lines(local: list[str], repo: list[str]) -> list[str]:
+    """
+    Combine code lines from both sides. Lines already present in local
+    are not duplicated from repo.
+    """
+    local_set = {l.strip() for l in local if l.strip()}
+    merged = list(local)
+    for line in repo:
+        if line.strip() and line.strip() not in local_set:
+            merged.append(line)
+    return merged
+
+
 def apply_resolution(file_path: str, resolutions: list[dict]) -> None:
-    """
-    Apply resolutions to a file. Each resolution has {index, strategy}.
-    Strategies: 'local', 'repo', 'both'.
-    Rewrites the file in one pass.
-    """
     path = Path(file_path)
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
 
-    # Build a lookup of conflict index → strategy
     strategy_map = {r["index"]: r["strategy"] for r in resolutions}
-
-    # Re-parse to get positions
-    conflicts = parse_conflicts(file_path)
-    # Map start_line → conflict info + strategy
-    conflict_at = {
+    conflicts    = parse_conflicts(file_path)
+    conflict_at  = {
         c["start_line"]: (c, strategy_map.get(c["index"], "local"))
         for c in conflicts
     }
@@ -115,14 +225,15 @@ def apply_resolution(file_path: str, resolutions: list[dict]) -> None:
         if i in conflict_at:
             conflict, strategy = conflict_at[i]
             if strategy == "local":
-                output.append(conflict["local"] + "\n" if conflict["local"] else "")
-            elif strategy == "repo":
-                output.append(conflict["repo"] + "\n" if conflict["repo"] else "")
-            elif strategy == "both":
                 if conflict["local"]:
                     output.append(conflict["local"] + "\n")
+            elif strategy == "repo":
                 if conflict["repo"]:
                     output.append(conflict["repo"] + "\n")
+            elif strategy == "both":
+                merged = conflict["preview"]  # already computed smart merge
+                if merged:
+                    output.append(merged + "\n")
             i = conflict["end_line"] + 1
         else:
             output.append(lines[i])
