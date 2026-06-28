@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFS Merge Conflict Resolver</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <header>
+        <h1>IFS Merge Conflict Resolver</h1>
+    </header>
+
+    <main>
+        <section id="setup">
+            <h2>Project Root</h2>
+            <div class="folder-input">
+                <input type="text" id="rootPath" placeholder="Enter your IFS project root path..." />
+                <button id="scanBtn" onclick="scanFolder()">Scan for Conflicts</button>
+            </div>
+        </section>
+
+        <section id="results" style="display:none;">
+            <h2>Conflict Files</h2>
+            <div id="fileList"></div>
+        </section>
+
+        <section id="resolver" style="display:none;">
+            <h2>Resolve Conflict</h2>
+            <div id="conflictView"></div>
+            <div class="actions">
+                <button onclick="resolve('local')">Keep Local Changes</button>
+                <button onclick="resolve('repo')">Keep Repo Changes</button>
+                <button onclick="resolve('both')">Keep Both Changes</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

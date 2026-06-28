@@ -1,0 +1,148 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+}
+
+header {
+    background: #2d3436;
+    color: white;
+    padding: 16px 32px;
+}
+
+header h1 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+main {
+    max-width: 1100px;
+    margin: 32px auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+section {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #636e72;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.folder-input {
+    display: flex;
+    gap: 12px;
+}
+
+.folder-input input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #dfe6e9;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.folder-input input:focus {
+    border-color: #0984e3;
+}
+
+button {
+    padding: 10px 20px;
+    background: #0984e3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+button:hover {
+    background: #0773c5;
+}
+
+#fileList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #fff8e1;
+    border: 1px solid #fdcb6e;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.file-item:hover {
+    background: #fff3cd;
+}
+
+.file-item .file-type {
+    font-size: 11px;
+    background: #fdcb6e;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.conflict-block {
+    margin-bottom: 20px;
+    border: 1px solid #dfe6e9;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.conflict-block .local {
+    background: #d4f5e9;
+    padding: 12px 16px;
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    border-bottom: 1px dashed #b2dfdb;
+}
+
+.conflict-block .repo {
+    background: #fde8e8;
+    padding: 12px 16px;
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+}
+
+.actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.actions button:nth-child(1) { background: #00b894; }
+.actions button:nth-child(1):hover { background: #00a381; }
+.actions button:nth-child(2) { background: #d63031; }
+.actions button:nth-child(2):hover { background: #b52a2a; }
+.actions button:nth-child(3) { background: #6c5ce7; }
+.actions button:nth-child(3):hover { background: #5a4bd1; }
