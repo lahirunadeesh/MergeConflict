@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import re
+import difflib
 from pathlib import Path
 from core.file_types import IFS_FILE_TYPES
 
@@ -85,10 +86,71 @@ def parse_conflicts(file_path: str) -> list[dict]:
                 "start_line": start,
                 "end_line":   end,
                 "preview":    _smart_merge_preview(local_lines, repo_lines),
+                "diff":       _build_diff(local_lines, repo_lines, start + 1),
             })
         i += 1
 
     return conflicts
+
+
+def _build_diff(local_lines: list[str], repo_lines: list[str], start_line: int) -> list[dict]:
+    """
+    Build a structured line-by-line diff between local and repo sides.
+    Each entry: { line_no_local, line_no_repo, text, kind }
+    kind: 'local' (green) | 'repo' (red) | 'context' (shared)
+    """
+    result = []
+    local_no = start_line
+    repo_no  = start_line
+
+    matcher = difflib.SequenceMatcher(None,
+        [l.rstrip("\n") for l in local_lines],
+        [l.rstrip("\n") for l in repo_lines],
+        autojunk=False,
+    )
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            for k in range(i2 - i1):
+                result.append({
+                    "line_no_local": local_no + k,
+                    "line_no_repo":  repo_no  + k,
+                    "text":  local_lines[i1 + k].rstrip("\n"),
+                    "kind":  "context",
+                })
+            local_no += i2 - i1
+            repo_no  += j2 - j1
+
+        elif tag in ("replace", "delete"):
+            for k in range(i2 - i1):
+                result.append({
+                    "line_no_local": local_no + k,
+                    "line_no_repo":  None,
+                    "text":  local_lines[i1 + k].rstrip("\n"),
+                    "kind":  "local",
+                })
+            local_no += i2 - i1
+            if tag == "replace":
+                for k in range(j2 - j1):
+                    result.append({
+                        "line_no_local": None,
+                        "line_no_repo":  repo_no + k,
+                        "text":  repo_lines[j1 + k].rstrip("\n"),
+                        "kind":  "repo",
+                    })
+                repo_no += j2 - j1
+
+        elif tag == "insert":
+            for k in range(j2 - j1):
+                result.append({
+                    "line_no_local": None,
+                    "line_no_repo":  repo_no + k,
+                    "text":  repo_lines[j1 + k].rstrip("\n"),
+                    "kind":  "repo",
+                })
+            repo_no += j2 - j1
+
+    return result
 
 
 def _smart_merge_preview(local_lines: list[str], repo_lines: list[str]) -> str:

@@ -97,8 +97,7 @@ function renderConflict() {
     const c = currentConflicts[currentIndex];
     document.getElementById("conflictCounter").textContent =
         `Conflict ${currentIndex + 1} of ${currentConflicts.length}`;
-    document.getElementById("localPane").textContent = c.local || "(empty)";
-    document.getElementById("repoPane").textContent = c.repo || "(empty)";
+    renderDiff(c.diff || []);
 
     // Show merged preview if both sides have content
     const previewPane = document.getElementById("previewPane");
@@ -109,7 +108,6 @@ function renderConflict() {
         previewPane.style.display = "none";
     }
 
-    // Clear previous info message when moving to new conflict
     setInfoMessage("", "");
 }
 
@@ -142,18 +140,15 @@ function resolve(strategy) {
     const previewWrap = document.getElementById("modalPreviewWrap");
     const previewEl   = document.getElementById("modalPreview");
 
-    if (strategy === "both" && c.preview) {
-        previewEl.textContent = c.preview;
-        previewWrap.style.display = "block";
-    } else if (strategy === "local") {
-        previewEl.textContent = c.local || "(empty)";
-        previewWrap.style.display = "block";
-    } else if (strategy === "repo") {
-        previewEl.textContent = c.repo || "(empty)";
-        previewWrap.style.display = "block";
-    } else {
-        previewWrap.style.display = "none";
-    }
+    // Show only the lines relevant to the chosen strategy
+    const lines = strategy === "both"
+        ? (c.preview || "").split("\n")
+        : strategy === "local"
+            ? (c.local || "").split("\n")
+            : (c.repo  || "").split("\n");
+
+    previewEl.textContent = lines.join("\n");
+    previewWrap.style.display = lines.some(l => l.trim()) ? "block" : "none";
 
     const confirmBtn = document.getElementById("modalConfirmBtn");
     confirmBtn.className = info.btnClass;
@@ -208,6 +203,43 @@ async function confirmResolve() {
     } else {
         renderConflict();
     }
+}
+
+function renderDiff(diffLines) {
+    const container = document.getElementById("diffView");
+    container.innerHTML = "";
+
+    if (!diffLines.length) {
+        container.innerHTML = '<div class="diff-empty">No differences detected.</div>';
+        return;
+    }
+
+    diffLines.forEach(entry => {
+        const row = document.createElement("div");
+        row.className = `diff-row diff-${entry.kind}`;
+
+        const localNo = document.createElement("span");
+        localNo.className = "diff-lineno";
+        localNo.textContent = entry.line_no_local !== null ? entry.line_no_local : "";
+
+        const repoNo = document.createElement("span");
+        repoNo.className = "diff-lineno";
+        repoNo.textContent = entry.line_no_repo !== null ? entry.line_no_repo : "";
+
+        const marker = document.createElement("span");
+        marker.className = "diff-marker";
+        marker.textContent = entry.kind === "local" ? "−" : entry.kind === "repo" ? "+" : " ";
+
+        const code = document.createElement("span");
+        code.className = "diff-code";
+        code.textContent = entry.text;
+
+        row.appendChild(localNo);
+        row.appendChild(repoNo);
+        row.appendChild(marker);
+        row.appendChild(code);
+        container.appendChild(row);
+    });
 }
 
 function showToast(msg) {

@@ -166,14 +166,74 @@ button:disabled:hover { background: #b2bec3; }
     font-weight: 500;
 }
 
-.panes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+/* ── Diff legend ── */
+.diff-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.legend-local   { color: #00695c; }
+.legend-repo    { color: #c0392b; }
+.legend-context { color: #b2bec3; }
+
+/* ── Diff view ── */
+.diff-view {
+    border: 1px solid #dfe6e9;
+    border-radius: 6px;
+    overflow: auto;
+    max-height: 400px;
     margin-bottom: 16px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    background: #fafafa;
 }
 
-.pane { border-radius: 6px; overflow: hidden; border: 1px solid #dfe6e9; }
+.diff-row {
+    display: grid;
+    grid-template-columns: 48px 48px 20px 1fr;
+    align-items: baseline;
+    padding: 0 4px;
+    border-bottom: 1px solid transparent;
+}
+.diff-row:hover { filter: brightness(0.96); }
+
+.diff-row.diff-local   { background: #e6ffed; border-bottom-color: #c6f0d4; }
+.diff-row.diff-repo    { background: #ffeef0; border-bottom-color: #f9c0c5; }
+.diff-row.diff-context { background: #fafafa; }
+
+.diff-lineno {
+    text-align: right;
+    padding-right: 10px;
+    color: #b2bec3;
+    user-select: none;
+    font-size: 11px;
+}
+
+.diff-marker {
+    text-align: center;
+    font-weight: 700;
+    user-select: none;
+}
+.diff-row.diff-local  .diff-marker { color: #00b894; }
+.diff-row.diff-repo   .diff-marker { color: #d63031; }
+.diff-row.diff-context .diff-marker { color: #b2bec3; }
+
+.diff-code {
+    padding: 0 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #2d3436;
+}
+
+.diff-empty {
+    padding: 20px;
+    color: #636e72;
+    text-align: center;
+    font-size: 13px;
+}
 
 .pane-label {
     font-size: 11px;
@@ -182,23 +242,6 @@ button:disabled:hover { background: #b2bec3; }
     letter-spacing: 0.5px;
     padding: 6px 12px;
 }
-
-.pane.local .pane-label { background: #d4f5e9; color: #00695c; }
-.pane.repo  .pane-label { background: #fde8e8; color: #c0392b; }
-
-.pane pre {
-    padding: 12px;
-    font-family: "SF Mono", Menlo, monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.6;
-    min-height: 80px;
-    background: #fafafa;
-}
-
-.pane.local pre { background: #f0fdf8; }
-.pane.repo  pre { background: #fff8f8; }
 
 /* ── Action buttons ── */
 .actions { display: flex; gap: 10px; }

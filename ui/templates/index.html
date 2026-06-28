@@ -37,16 +37,13 @@
                 <span id="conflictCounter" class="counter"></span>
             </div>
 
-            <div class="panes">
-                <div class="pane local">
-                    <div class="pane-label">Local (your changes)</div>
-                    <pre id="localPane"></pre>
-                </div>
-                <div class="pane repo">
-                    <div class="pane-label">Incoming (repo changes)</div>
-                    <pre id="repoPane"></pre>
-                </div>
+            <div class="diff-legend">
+                <span class="legend-local">■ Local only</span>
+                <span class="legend-repo">■ Repo only</span>
+                <span class="legend-context">■ Unchanged</span>
             </div>
+
+            <div class="diff-view" id="diffView"></div>
 
             <div id="previewPane" style="display:none;">
                 <div class="pane-label preview-label">Keep Both — merged preview</div>
